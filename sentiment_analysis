@@ -1,0 +1,244 @@
+# read_keywords function takes keyword_file_name,
+# and reads and strips the tsv file to put all keywords into dictionary
+# returns a dictionary
+def read_keywords(keyword_file_name):
+    dict = {}
+
+    try:
+        keyword_file = open(keyword_file_name,"r")
+
+        # strips and splits tab seperated values and makes
+        # dictionary of words as keys and numbers as values
+        for text in keyword_file:
+            parts = text.strip().split('\t')
+            if len(parts) == 2:
+                word = parts[0]
+                number = parts[1]
+                dict[word] = int(number)
+
+    except IOError:
+        print("Could not open file " + keyword_file_name + "!")
+    return dict
+    # Should return a dict of keywords.
+
+
+# clean_tweet_text function takes tweet_text and checks if it has values in accepted set
+# All non accepted characters are filtered out
+# returns a string with the clean tweet text.
+def clean_tweet_text(tweet_text):
+
+    # filters out the characeters in tweet_text based on accepted set using __contains__ method
+    accepted = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ")
+    cleaned = "".join(filter(accepted.__contains__, tweet_text.lower()))
+    return cleaned
+    # Should return a string with the clean tweet text.
+
+
+# calc_sentiment function takes tweet_text and keyword_dictionary to see if each
+# word in tweet_text is in keyword_dictionary
+# If word in both, the counter adds the dictionary value of word
+# the counter value after loop ends is the sentiment
+# returns an integer value.
+def calc_sentiment(tweet_text, keyword_dict):
+    count = 0
+    tweet_text = tweet_text.split()
+    for i in tweet_text:
+        for j in keyword_dict:
+            if i == j:
+                count += keyword_dict[i]
+    return count
+    # Should return an integer value.
+
+
+# classify function takes score to determine positive, negative, or neutral sentiment
+# returns a string.
+def classify(score):
+    if score > 0:
+        return ("Positive")
+    elif score < 0:
+        return ("Negative")
+    else:
+        return ("Neutral")
+    # Should return a string.
+
+
+# read_tweets function opens tweet_file_name, and splits at commas to separate tweet components
+# components added to a dictionary for each tweet
+# each dictionary added to a list
+# returns a list with a dictionary for each tweet.
+def read_tweets(tweet_file_name):
+    list = []
+
+    try:
+        tweet_file = open(tweet_file_name, "r")
+
+        # strips whenever there is a comma in the comma separated value file
+        for text in tweet_file:
+            parts1 = text.strip().split(",")
+
+            # forms a dictionary containing each component of tweet as different key-value pair
+            if len(parts1) == 11:
+                date = parts1[0]
+                text = parts1[1]
+                user = parts1[2]
+                retweet = parts1[3]
+                favorite = parts1[4]
+                lang = parts1[5]
+                country = parts1[6]
+                state = parts1[7]
+                city = parts1[8]
+                lat = parts1[9]
+                lon = parts1[10]
+
+                # If values are "NULL", the values are strings rather than floats
+                if parts1[9] == "NULL":
+                    lat = str(parts1[9])
+                else:
+                    lat = float(parts1[9])
+
+                if parts1[10] == "NULL":
+                    lon = str(parts1[10])
+                else:
+                    lon = float(parts1[10])
+
+                dictionary = {"date": date, "text": clean_tweet_text(text.lower()), "user": user, "retweet": int(retweet),
+                              "favorite": int(favorite), "lang": lang, "country": country, "state": state,
+                              "city": city, "lat": (lat), "lon": (lon)}
+                list.append(dictionary)
+    except IOError:
+        print("Could not open file " + tweet_file_name)
+
+    return list
+    # Should return a list with a dictionary for each tweet.
+
+
+#make_report function takes tweet_list and keyword_dict to find all required values
+#calculates number of retweets, tweets, favorites, positves, negatives, neutrals, and averages
+#Every value then added to a dictionary
+#Should return a dictionary containing the report values.
+def make_report(tweet_list, keyword_dict):
+    #num_tweets = len(tweet_list)
+
+    for i in tweet_list:
+        cleaned = clean_tweet_text(i["text"].lower())
+        i["sentiment"] = calc_sentiment(cleaned, keyword_dict)
+
+    sum = 0
+    total_positive = 0
+    total_negative = 0
+    total_neutral = 0
+    num_favorites = 0
+    sum_favorite = 0
+    num_retweet = 0
+    sum_retweet = 0
+    num_tweets = 0
+
+
+    for i in tweet_list:
+        num_tweets += 1
+        cleaned = clean_tweet_text(i["text"].lower())
+        sum += calc_sentiment(cleaned, keyword_dict)
+
+        # calls classification function to get the classification value
+        # and the number of times each classification occurs
+        classification = classify(i["sentiment"])
+        if classification == "Positive":
+            total_positive += 1
+        if classification == "Negative":
+            total_negative += 1
+        if classification == "Neutral":
+            total_neutral += 1
+
+        # calculates number of tweets favorited more than once
+        # calculates the total sentiment for every tweet favorited more than once
+        if int(i["favorite"]) >= 1:
+            num_favorites += 1
+            cleaned = clean_tweet_text(i["text"])
+            sum_favorite += calc_sentiment(cleaned, keyword_dict)
+
+        # calculates number of tweets retweeted more than once
+        # calculates the total sentiment for every tweet retweeted more than once
+        if int(i["retweet"]) >= 1:
+            num_retweet += 1
+            cleaned = clean_tweet_text(i["text"])
+            sum_retweet += calc_sentiment(cleaned, keyword_dict)
+
+    country_dict = {}
+
+    # adds country to country_dict if not already in
+    # calculates total sentiment for each country
+    for i in tweet_list:
+        if i["country"] not in country_dict and i["country"] != "NULL":
+            country_dict[i["country"]] = [1, calc_sentiment(i["text"], keyword_dict)]
+        elif i["country"] in country_dict and i["country"] != "NULL":
+            country_dict[i["country"]][0] += 1
+            country_dict[i["country"]][1] += calc_sentiment(i["text"], keyword_dict)
+
+    # calculates averages
+    average = round(sum / num_tweets, 2)
+
+    if num_favorites != 0:
+        average_favorite = round(sum_favorite / num_favorites, 2)
+    else:
+        average_favorite = "NAN"
+
+    if num_retweet != 0:
+        average_retweet = round(sum_retweet / num_retweet, 2)
+    else:
+        average_retweet = "NAN"
+
+    average_per_country = {}
+    for i in country_dict.items():
+        average_per_country[i[0]] = i[1][1] / i[1][0]
+
+    # sorts countries in average_per_country dictionary and puts country names in list
+    sorted_countries = sorted(average_per_country.items(), key=lambda kv: kv[1], reverse=True)
+    country_list = [x[0] for x in sorted_countries][:5]
+
+    report_dict = {"avg_favorite": average_favorite,
+                   "avg_retweet": average_retweet,
+                   "avg_sentiment": average,
+                   "num_favorite": num_favorites,
+                   "num_negative": total_negative,
+                   "num_neutral": total_neutral,
+                   "num_positive": total_positive,
+                   "num_retweet": num_retweet,
+                   "num_tweets": num_tweets,
+                   "top_five": ", ".join(country_list)}
+
+    return report_dict
+    # Should return a dictionary containing the report values.
+
+
+#write_report function takes report and output_file to write all information calculated,
+#in a new output file
+#Should write the report to the output_file.
+def write_report(report, output_file):
+    # try except used for IOError exceptions
+    try:
+        # writes out all required values to the output_file text file
+        final_report = open(output_file, "w")
+        final_report.write("Average sentiment of all tweets: ")
+        final_report.write(str(report["avg_sentiment"]) + "\n")
+        final_report.write("Total number of tweets: ")
+        final_report.write(str(report["num_tweets"]) + "\n")
+        final_report.write("Number of positive tweets: ")
+        final_report.write(str(report["num_positive"]) + "\n")
+        final_report.write("Number of negative tweets: ")
+        final_report.write(str(report["num_negative"]) + "\n")
+        final_report.write("Number of neutral tweets: ")
+        final_report.write(str(report["num_neutral"]) + "\n")
+        final_report.write("Number of favorited tweets: ")
+        final_report.write(str(report["num_favorite"]) + "\n")
+        final_report.write("Average sentiment of favorited tweets: ")
+        final_report.write(str(report["avg_favorite"]) + "\n")
+        final_report.write("Number of retweeted tweets: ")
+        final_report.write(str(report["num_retweet"]) + "\n")
+        final_report.write("Average sentiment of retweeted tweets: ")
+        final_report.write(str(report["avg_retweet"]) + "\n")
+        final_report.write("Top five countries by average sentiment: ")
+        final_report.write(str(report["top_five"]))
+        print("Wrote report to "+ output_file)
+    except IOError:
+        print("Could not open file " + output_file)
+    # Should write the report to the output_file.
