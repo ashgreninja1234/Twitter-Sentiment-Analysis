@@ -1,0 +1,32 @@
+#Import the sentiment_analysis module
+from sentiment_analysis import *
+
+#main function asks for file name inputs and calls functions from sentiment_analysis.py
+def main():
+
+    keyword_file_name = input("Enter the name of the keyword file: ")
+    keyword_ending = keyword_file_name[-4:]
+    if keyword_ending != ".tsv":
+        raise Exception("Must have tsv file extension!")
+    elif keyword_ending == "":
+        raise Exception("Tweet list or keyword dictionary is empty!")
+
+    tweets_file_name = input("Enter the name of the tweets file: ")
+    tweet_ending = tweets_file_name[-4:]
+    if tweet_ending != ".csv":
+        raise Exception("Must have csv file extension!")
+    elif tweet_ending == "":
+        raise Exception("Tweet list or keyword dictionary is empty!")
+
+    output_file_name = input("Enter the name of the output file: ")
+    output_ending = tweets_file_name[-4:]
+    if output_ending != ".csv":
+        raise Exception("Must have txt file extension!")
+
+    a = read_keywords(keyword_file_name)
+    b = read_tweets(tweets_file_name)
+    f = make_report(b, a)
+    g = write_report(f, output_file_name)
+
+
+main()
